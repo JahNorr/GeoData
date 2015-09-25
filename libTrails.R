@@ -95,6 +95,15 @@ build_trail_areas<-function() {
 }
 
 write_segment_ends<-function(df,seg_count,key="tmp") {
+    
+    dfMinMax<-get_segment_ends(df,seg_count )
+    
+    write.csv(x=dfMinMax,file=paste("./output/seg_temp_",key,".csv",sep=""))
+    
+}
+
+get_segment_ends<-function(df,seg_count) {
+    
     minlats<-numeric(seg_count)
     maxlats<-numeric(seg_count)
     minlons<-numeric(seg_count)
@@ -116,9 +125,7 @@ write_segment_ends<-function(df,seg_count,key="tmp") {
     
     
     dfMinMax<-data.frame(segment_id=1:seg_count,minlats=minlats,maxlats=maxlats,minlons=minlons,maxlons=maxlons)
-    
-    write.csv(x=dfMinMax,file=paste("./output/seg_temp_",key,".csv",sep=""))
-    
+
 }
 
 get_trail_data_name<-function(name) {
@@ -171,4 +178,33 @@ load_trails<-function(name) {
     filename_save<-paste("./data/trails/",name,".RData",sep="")
     
     load(file=filename_save,envir = .GlobalEnv)
+}
+
+
+check_reverse<-function(area_id,trail_id,seg_count) {
+    if(seg_count==2) {
+        ends<-get_segment_ends(get_trail_latlons(area_id,trail_id),seg_count = seg_count)
+        if(abs(ends[1,"minlons"]-ends[2,"maxlons"])<abs(ends[2,"minlons"]-ends[1,"maxlons"])) {
+            return (TRUE)
+        }
+    } 
+    return (FALSE)
+}
+
+
+reverse_segments<-function(area_id,trail_id,seg_count) {
+    rearrange<-read.csv("./data/trails/arrange_points.csv",header = T)
+    rearrange<-rearrange[!(rearrange$trail_id==trail_id && rearrange$area_id==area_id),]
+    
+    df<-as.data.frame(matrix(ncol = ncol(rearrange),nrow=seg_count))
+    colnames(df)<-colnames(rearrange)
+    for(i in 1:seg_count) {
+        df[i,1]=area_id
+        df[i,2]=trail_id
+        df[i,3]=i
+        df[i,4]=seg_count+1-i
+    }
+    
+    rearrange<-rbind(rearrange,df)
+    write.csv(rearrange,file="./data/trails/arrange_points.csv")
 }

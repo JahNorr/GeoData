@@ -1,17 +1,23 @@
 
 library(ggplot2)
 
+get_trail_latlons<-function(area_id,trail_id) {
+    
+    df_latlons<-all_trail_latlons
+       
+    lloi<-(df_latlons$trail_id==trail_id) & (df_latlons$area_id==area_id)
+    latlons<-df_latlons[lloi,]
+    
+}
+
 plot_trail<-function(area_of_interest,trail_id,write_segs=F) {
     df_rearrange_trails<-read.csv("./data/trails/arrange_points.csv",header = T)
     
     area_id<-getTrailAreaID(area_of_interest)
     
-    df_latlons<-all_trail_latlons
     
+    latlons<-get_trail_latlons(area_id,trail_id)
     
-    
-    lloi<-(df_latlons$trail_id==trail_id) & (df_latlons$area_id==area_id)
-    latlons<-df_latlons[lloi,]
     
     seg_count<-max(latlons$segment_id)
     
@@ -31,15 +37,6 @@ plot_trail<-function(area_of_interest,trail_id,write_segs=F) {
     
     
     latlons$segment_id<-abs(latlons$segment_id)
-    
-    
-    reverse<-FALSE
-    
-    if (reverse) {
-        latlons$segment_id<-(-latlons$segment_id)
-        latlons$segment_id<-latlons$segment_id+seg_count+1
-        
-    }
     
     ord<-order(latlons$segment_id,as.integer(rownames(latlons)))
     

@@ -58,12 +58,16 @@ seg_count<-as.integer(trail_seg_counts[ok_trails,"seg_count"][1])
 trail_id<-trails_to_check[1]
 trail_name<-unique(as.character(trails[trails$ID==trail_id,"NAME"]))
 
-if (F) {
-reverse_segments(area_id,trail_id,seg_count)
+if (check_reverse(area_id,trail_id,seg_count)) {
+    reverse_segments(area_id,trail_id,seg_count)
 }
+
+
+
 
 print(paste("trail ",trail_id," (",trail_name,")  has ",seg_count," segments",sep=""))
 latlons_plot<-plot_trail(area_of_interest,trail_id,write_segs=T)
+
 
 
 yn_accept<-FALSE
@@ -76,19 +80,3 @@ if (yn_accept) {
 plot_trail_saved(area_of_interest,trail_id)
 
 
-reverse_segments<-function(area_id,trail_id,seg_count) {
-    rearrange<-read.csv("./data/trails/arrange_points.csv",header = T)
-    rearrange<-rearrange[!(rearrange$trail_id==trail_id && rearrange$area_id==area_id),]
-    
-    df<-as.data.frame(matrix(ncol = ncol(rearrange),nrow=seg_count))
-    colnames(df)<-colnames(rearrange)
-    for(i in 1:seg_count) {
-        df[i,1]=area_id
-        df[i,2]=trail_id
-        df[i,3]=i
-        df[i,4]=seg_count+1-i
-    }
-    
-    rearrange<-rbind(rearrange,df)
-    write.csv(rearrange,file="./data/trails/arrange_points.csv")
-}
