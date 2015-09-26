@@ -58,15 +58,16 @@ seg_count<-as.integer(trail_seg_counts[ok_trails,"seg_count"][1])
 trail_id<-trails_to_check[1]
 trail_name<-unique(as.character(trails[trails$ID==trail_id,"NAME"]))
 
-if (check_reverse(area_id,trail_id,seg_count)) {
-    reverse_segments(area_id,trail_id,seg_count)
+if (F) {}
+# if (check_reverse(area_id,trail_id,seg_count)) {
+     reverse_segments(area_id,trail_id,seg_count)
+# }
 }
 
-
-
+arrange_segments(area_id,trail_id)
 
 print(paste("trail ",trail_id," (",trail_name,")  has ",seg_count," segments",sep=""))
-latlons_plot<-plot_trail(area_of_interest,trail_id,write_segs=T)
+latlons_plot<-plot_trail(area_of_interest,trail_id,write_segs=F)
 
 
 
@@ -79,4 +80,9 @@ if (yn_accept) {
 #trail_id<-"353"
 plot_trail_saved(area_of_interest,trail_id)
 
+
+
+all_trail_latlons[all_trail_latlons$area_id==area_id & 
+                      all_trail_latlons$trail_id==trail_id & 
+                      all_trail_latlons$segment_id==3,"segment_id"]<-1
 

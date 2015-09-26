@@ -96,35 +96,37 @@ build_trail_areas<-function() {
 
 write_segment_ends<-function(df,seg_count,key="tmp") {
     
-    dfMinMax<-get_segment_ends(df,seg_count )
+    dfMinMax<-get_segment_ends(df )
     
     write.csv(x=dfMinMax,file=paste("./output/seg_temp_",key,".csv",sep=""))
     
 }
 
-get_segment_ends<-function(df,seg_count) {
+get_segment_ends<-function(df) {
     
-    minlats<-numeric(seg_count)
-    maxlats<-numeric(seg_count)
-    minlons<-numeric(seg_count)
-    maxlons<-numeric(seg_count)
+    seg_count<-length(unique(df$segment_id))
+    
+    startlats<-numeric(seg_count)
+    endlats<-numeric(seg_count)
+    startlons<-numeric(seg_count)
+    endlons<-numeric(seg_count)
     
     for(i in 1:seg_count) {
         ids<-row.names(df[df$segment_id==i,])
         lats<-df[df$segment_id==i,"latitude"]
         lons<-df[df$segment_id==i,"longitude"]
-        minpt<-min(ids)
-        maxpt<-max(ids)
-        minlats[i]<-df[minpt,"latitude"]
-        maxlats[i]<-df[maxpt,"latitude"]
-        minlons[i]<-df[minpt,"longitude"]
-        maxlons[i]<-df[maxpt,"longitude"]
+        startpt<-min(ids)
+        endpt<-max(ids)
+        startlats[i]<-df[startpt,"latitude"]
+        endlats[i]<-df[endpt,"latitude"]
+        startlons[i]<-df[startpt,"longitude"]
+        endlons[i]<-df[endpt,"longitude"]
         
     }
     
     
     
-    dfMinMax<-data.frame(segment_id=1:seg_count,minlats=minlats,maxlats=maxlats,minlons=minlons,maxlons=maxlons)
+    dfMinMax<-data.frame(segment_id=1:seg_count,startlats=startlats,endlats=endlats,startlons=startlons,endlons=endlons)
 
 }
 
@@ -180,11 +182,75 @@ load_trails<-function(name) {
     load(file=filename_save,envir = .GlobalEnv)
 }
 
+arrange_segments<-function(area_id,trail_id) {
+    segs_in<-get_segment_ends(get_trail_latlons(area_id,trail_id))
+    
+    total_rows<-nrow(segs_in)
+    
+    segs_out<-segs_in[1,]
+    segs_in<-segs_in[2:nrow(segs_in),]
+    yndone = F
+    nxt<-1
+    changed<-F
+    
+    repeat {
+           
+        roi<-segs_in[nxt,]
+        
+        if(roi[1,"endlons"]==segs_out[1,"startlons"]) {
+            segs_out<-rbind(roi,segs_out)
+            if(nrow(segs_out)==total_rows) {
+                yndone<-T
+            } else {
+                segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
+            }
+            changed<-T
+            
+        } else if(roi[1,"startlons"]==segs_out[nrow(segs_out),"startlons"]) {
+            segs_out<-rbind(segs_out,roi)
+            if(nrow(segs_out)==total_rows) {
+                yndone<-T
+            } else {
+                segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
+            }
+            changed<-T
+            
+        } else {
+            
+        }
+        
+        if (changed) {
+            nxt<-1
+            changed<-F
+        } else {
+            nxt<-nxt+1
+            if(nxt>nrow(segs_in)) yndone<-T
+        }
+        
+        
+        if(yndone) break
+    }
+    
+    if(nrow(segs_out)==total_rows) {
+        mapply(function(x,y,z) {
+            all_trail_latlons[all_trail_latlons$area_id==area_id & 
+                                  all_trail_latlons$trail_id==trail_id & 
+                                  all_trail_latlons$segment_id==x ,"segment_id"]<<-y+z
+        },1:nrow(segs_out),segs_out$segment_id,total_rows)#, MoreArgs = list(area_id=area_id,trail_id=trail_id)) 
+        
+#         all_trail_latlons[all_trail_latlons$area_id==area_id & 
+#                               all_trail_latlons$trail_id==trail_id ,"segment_id"]<-abs(all_trail_latlons[all_trail_latlons$area_id==area_id && 
+#                                                                                                              all_trail_latlons$trail_id==trail_id ,"segment_id"])
+    }
+    
+    segs_out
+}
+
 
 check_reverse<-function(area_id,trail_id,seg_count) {
     if(seg_count==2) {
         ends<-get_segment_ends(get_trail_latlons(area_id,trail_id),seg_count = seg_count)
-        if(abs(ends[1,"minlons"]-ends[2,"maxlons"])<abs(ends[2,"minlons"]-ends[1,"maxlons"])) {
+        if(abs(ends[1,"startlons"]-ends[2,"endlons"])<abs(ends[2,"startlons"]-ends[1,"endlons"])) {
             return (TRUE)
         }
     } 
@@ -193,18 +259,32 @@ check_reverse<-function(area_id,trail_id,seg_count) {
 
 
 reverse_segments<-function(area_id,trail_id,seg_count) {
-    rearrange<-read.csv("./data/trails/arrange_points.csv",header = T)
-    rearrange<-rearrange[!(rearrange$trail_id==trail_id && rearrange$area_id==area_id),]
     
-    df<-as.data.frame(matrix(ncol = ncol(rearrange),nrow=seg_count))
-    colnames(df)<-colnames(rearrange)
+    df<-data.frame(area_id=integer(seg_count),    
+                   trail_id=character(seg_count),
+                   segment_old=integer(seg_count),
+                   segment_new=integer(seg_count),stringsAsFactors=F)
+    
+    #area_id    trail_id	segment_old	segment_new
+    
     for(i in 1:seg_count) {
         df[i,1]=area_id
         df[i,2]=trail_id
         df[i,3]=i
         df[i,4]=seg_count+1-i
     }
+   
     
-    rearrange<-rbind(rearrange,df)
-    write.csv(rearrange,file="./data/trails/arrange_points.csv")
+    mapply(function(x,y,z) {
+        all_trail_latlons[all_trail_latlons$area_id==area_id & 
+                              all_trail_latlons$trail_id==trail_id & 
+                              all_trail_latlons$segment_id==x ,"segment_id"]<<-y+z
+    },df$segment_old,df$segment_new,seg_count)
+    
+    mapply(function(y,z) {
+        all_trail_latlons[all_trail_latlons$area_id==area_id & 
+                              all_trail_latlons$trail_id==trail_id & 
+                              all_trail_latlons$segment_id==y+z ,"segment_id"]<<-y
+    },df$segment_new,seg_count)
+    
 }
