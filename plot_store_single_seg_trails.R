@@ -1,7 +1,6 @@
 
 
 library(ggplot2)
-df_rearrange_trails<-read.csv("./data/trails/arrange_points.csv",header = T)
 
 #all_trails[all_trails$segment_id]
 
@@ -9,7 +8,7 @@ df_rearrange_trails<-read.csv("./data/trails/arrange_points.csv",header = T)
 #
 #   set up the area of interest
 #
-area_of_interest<-"flathead"
+area_of_interest<-"kootenai"
 area_id<-getTrailAreaID(area_of_interest)
 
 ########################################
@@ -58,7 +57,7 @@ trails_to_check<-as.character(single_seg_trails[ok_trails])
 #   plot it and store it
 #
 
-sapply(trails_to_check[1:60],function(x) {
+sapply(trails_to_check[1:28],function(x) {
     latlons_plot<-plot_trail(area_of_interest,x,write_segs=F)
     accept_trail(area_of_interest,x,latlons_plot)
 })

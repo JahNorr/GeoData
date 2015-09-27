@@ -182,10 +182,42 @@ load_trails<-function(name) {
     load(file=filename_save,envir = .GlobalEnv)
 }
 
+segment_gaps<-function(df) {
+    total_rows<-nrow(segs_in)
+    mlats<-matrix(nrow =total_rows,ncol = total_rows )
+    for (i in 1:total_rows) {
+        for (j in 1:total_rows) {
+            mlats[i,j]<-abs(df[i,"endlats"]-df[j,"startlats"])
+            if(i==j)mlats[i,j]<-NA
+        }
+    }
+
+    mins<-integer(total_rows)
+    
+    for (i in 1:total_rows) {
+        mins[i]<-which.min(mlats[i,])
+    }
+#    mins<-sapply(mlats,function(x) which.min(x[1,]))
+    mins
+}
+
+arrange_segments_closest<-function(area_id,trail_id) {
+    segs_in<-get_segment_ends(get_trail_latlons(area_id,trail_id))
+    
+    mapply(segs_in$startlat)
+    
+    total_rows<-nrow(segs_in)
+    
+    if (total_rows==1) return
+    
+}
+
 arrange_segments<-function(area_id,trail_id) {
     segs_in<-get_segment_ends(get_trail_latlons(area_id,trail_id))
     
     total_rows<-nrow(segs_in)
+    
+    if (total_rows==1) return
     
     segs_out<-segs_in[1,]
     segs_in<-segs_in[2:nrow(segs_in),]
@@ -206,7 +238,7 @@ arrange_segments<-function(area_id,trail_id) {
             }
             changed<-T
             
-        } else if(roi[1,"startlons"]==segs_out[nrow(segs_out),"startlons"]) {
+        } else if(roi[1,"startlons"]==segs_out[nrow(segs_out),"endlons"]) {
             segs_out<-rbind(segs_out,roi)
             if(nrow(segs_out)==total_rows) {
                 yndone<-T
@@ -236,11 +268,15 @@ arrange_segments<-function(area_id,trail_id) {
             all_trail_latlons[all_trail_latlons$area_id==area_id & 
                                   all_trail_latlons$trail_id==trail_id & 
                                   all_trail_latlons$segment_id==x ,"segment_id"]<<-y+z
-        },1:nrow(segs_out),segs_out$segment_id,total_rows)#, MoreArgs = list(area_id=area_id,trail_id=trail_id)) 
+        },1:nrow(segs_out),segs_out$segment_id,total_rows)
         
-#         all_trail_latlons[all_trail_latlons$area_id==area_id & 
-#                               all_trail_latlons$trail_id==trail_id ,"segment_id"]<-abs(all_trail_latlons[all_trail_latlons$area_id==area_id && 
-#                                                                                                              all_trail_latlons$trail_id==trail_id ,"segment_id"])
+
+        mapply(function(x,z) {
+            all_trail_latlons[all_trail_latlons$area_id==area_id & 
+                                  all_trail_latlons$trail_id==trail_id & 
+                                  all_trail_latlons$segment_id==x+z ,"segment_id"]<<-x
+        },1:nrow(segs_out),total_rows)
+#         
     }
     
     segs_out
@@ -288,3 +324,22 @@ reverse_segments<-function(area_id,trail_id,seg_count) {
     },df$segment_new,seg_count)
     
 }
+
+split_segments<-function(area_id,trail_id,seg_count,index) {
+    
+   
+    mapply(function(x,y) {
+        all_trail_latlons[all_trail_latlons$area_id==area_id & 
+                              all_trail_latlons$trail_id==trail_id & 
+                              all_trail_latlons$segment_id==x ,"segment_id"]<<-x+y
+    },1:index,seg_count)
+    
+    mapply(function(y,z) {
+        all_trail_latlons[all_trail_latlons$area_id==area_id & 
+                              all_trail_latlons$trail_id==trail_id & 
+                              all_trail_latlons$segment_id==y+z ,"segment_id"]<<-y
+    },1:seg_count,index)
+    
+}
+
+

@@ -11,7 +11,7 @@ get_trail_latlons<-function(area_id,trail_id) {
 }
 
 plot_trail<-function(area_of_interest,trail_id,write_segs=F) {
-    df_rearrange_trails<-read.csv("./data/trails/arrange_points.csv",header = T)
+#    df_rearrange_trails<-read.csv("./data/trails/arrange_points.csv",header = T)
     
     area_id<-getTrailAreaID(area_of_interest)
     
@@ -21,19 +21,19 @@ plot_trail<-function(area_of_interest,trail_id,write_segs=F) {
     
     seg_count<-max(latlons$segment_id)
     
-    arrange<-df_rearrange_trails[(df_rearrange_trails$trail_id==trail_id) & (df_rearrange_trails$area_id==area_id),]
+#    arrange<-df_rearrange_trails[(df_rearrange_trails$trail_id==trail_id) & (df_rearrange_trails$area_id==area_id),]
     
     if(write_segs) {
         write_segment_ends(latlons,key="in",seg_count = seg_count)
     }
     
     
-    mapply(function(x,y) {
-        inc<-latlons["segment_id"]==x
-        #print(inc)
-        latlons[inc,"segment_id"]<<-(-y)
-        
-    },arrange$segment_old,arrange$segment_new)
+#     mapply(function(x,y) {
+#         inc<-latlons["segment_id"]==x
+#         #print(inc)
+#         latlons[inc,"segment_id"]<<-(-y)
+#         
+#     },arrange$segment_old,arrange$segment_new)
     
     
     latlons$segment_id<-abs(latlons$segment_id)
