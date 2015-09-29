@@ -18,5 +18,3 @@ load_trails("kootenai")
 all_trails<-rbind(flathead_trails,kootenai_trails)
 all_trail_latlons<-rbind(flathead_latlons,kootenai_latlons)
 
-#eliminate the duplicates
-

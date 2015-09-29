@@ -76,7 +76,7 @@ repeat {
     print(paste("trail ",trail_id," (",trail_name,")  has ",seg_count," segments",sep=""))
     latlons_plot<-plot_trail(area_of_interest,trail_id,write_segs=T)
     
-    cat("\n","This trail ok (y[es]/n[o]/s[kip]/r[everse]/q[uit]):","\n") # prompt 
+    cat("\n","This trail ok (y[es]/n[o]/s[kip]/c[losest]/r[everse]/q[uit]):","\n") # prompt 
     input<-scan(n=1,what="character") 
     
     if (input[1]=="q") break
@@ -89,6 +89,9 @@ repeat {
     else if (input[1]=="r") {
         reverse_segments(area_id,trail_id,seg_count)
     }
+    else if (input[1]=="c") {
+        arrange_segments_closest(area_id,trail_id)
+    }
 }
 
 
@@ -100,6 +103,13 @@ all_trail_latlons[all_trail_latlons$area_id==area_id &
                       all_trail_latlons$trail_id==trail_id & 
                       all_trail_latlons$segment_id==3,"segment_id"]<-1
 
+
+check_skip()<-function() {
+    
+    if(!exists("df_skip")) {
+        df_skip<-data.frame(area_id=numeric(),trail_id=character(),stringsAsFactors=F)
+    }
+}
 
 
 add_skip<-function(area_id,trail_id) {

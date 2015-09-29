@@ -1,4 +1,5 @@
 library(stringr) 
+library(geosphere)
 
 source("./libGeoData.R")
 
@@ -184,6 +185,12 @@ load_trails<-function(name) {
 
 segment_gaps<-function(df) {
     total_rows<-nrow(segs_in)
+    p1<-data.frame(segs_in$endlons,segs_in$endlats)
+    p1<-data.frame(segs_in$startlons,segs_in$startlats)
+    
+    sapply()
+    dist<-distHaversine(p1, p2)
+    
     mlats<-matrix(nrow =total_rows,ncol = total_rows )
     for (i in 1:total_rows) {
         for (j in 1:total_rows) {
@@ -204,12 +211,81 @@ segment_gaps<-function(df) {
 arrange_segments_closest<-function(area_id,trail_id) {
     segs_in<-get_segment_ends(get_trail_latlons(area_id,trail_id))
     
-    mapply(segs_in$startlat)
-    
     total_rows<-nrow(segs_in)
     
     if (total_rows==1) return
     
+    segs_out<-segs_in[1,]
+    segs_in<-segs_in[2:nrow(segs_in),]
+    yndone = F
+    nxt<-1
+    changed<-F
+    
+    pt1_e<-numeric(2)
+    pt2_s<-numeric(2)
+    
+    tolerance<-20
+    
+    repeat {
+        
+        roi<-segs_in[nxt,]
+        pt1_e<-c(roi[1,"endlons"],roi[1,"endlats"])
+        pt2_s<-c(segs_out[1,"startlons"],segs_out[1,"startlats"])
+        
+        pt1_s<-c(roi[1,"startlons"],roi[1,"startlats"])
+        pt2_e<-c(segs_out[1,"endlons"],segs_out[1,"endlats"])
+        
+        if(distHaversine(pt1_e,pt2_s)<tolerance) {
+            segs_out<-rbind(roi,segs_out)
+            if(nrow(segs_out)==total_rows) {
+                yndone<-T
+            } else {
+                segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
+            }
+            changed<-T
+            
+        } else if (distHaversine(pt1_s,pt2_e)<tolerance) {
+            segs_out<-rbind(segs_out,roi)
+            if(nrow(segs_out)==total_rows) {
+                yndone<-T
+            } else {
+                segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
+            }
+            changed<-T
+            
+        } else {
+            
+        }
+        
+        if (changed) {
+            nxt<-1
+            changed<-F
+        } else {
+            nxt<-nxt+1
+            if(nxt>nrow(segs_in)) yndone<-T
+        }
+        
+        
+        if(yndone) break
+    }
+    
+    if(nrow(segs_out)==total_rows) {
+        mapply(function(x,y,z) {
+            all_trail_latlons[all_trail_latlons$area_id==area_id & 
+                                  all_trail_latlons$trail_id==trail_id & 
+                                  all_trail_latlons$segment_id==x ,"segment_id"]<<-y+z
+        },1:nrow(segs_out),segs_out$segment_id,total_rows)
+        
+        
+        mapply(function(x,z) {
+            all_trail_latlons[all_trail_latlons$area_id==area_id & 
+                                  all_trail_latlons$trail_id==trail_id & 
+                                  all_trail_latlons$segment_id==x+z ,"segment_id"]<<-x
+        },1:nrow(segs_out),total_rows)
+        #         
+    }
+    
+    segs_out
 }
 
 arrange_segments<-function(area_id,trail_id) {
@@ -224,11 +300,11 @@ arrange_segments<-function(area_id,trail_id) {
     yndone = F
     nxt<-1
     changed<-F
-    
+
     repeat {
            
         roi<-segs_in[nxt,]
-        
+
         if(roi[1,"endlons"]==segs_out[1,"startlons"]) {
             segs_out<-rbind(roi,segs_out)
             if(nrow(segs_out)==total_rows) {
@@ -265,10 +341,14 @@ arrange_segments<-function(area_id,trail_id) {
     
     if(nrow(segs_out)==total_rows) {
         mapply(function(x,y,z) {
+            in_seg<-x
+            out_seg<-y+z
+            print(paste(in_seg,"->",out_seg,sep=""))
+                  
             all_trail_latlons[all_trail_latlons$area_id==area_id & 
                                   all_trail_latlons$trail_id==trail_id & 
-                                  all_trail_latlons$segment_id==x ,"segment_id"]<<-y+z
-        },1:nrow(segs_out),segs_out$segment_id,total_rows)
+                                  all_trail_latlons$segment_id==in_seg ,"segment_id"]<<-out_seg
+        },segs_out$segment_id,1:nrow(segs_out),total_rows)
         
 
         mapply(function(x,z) {

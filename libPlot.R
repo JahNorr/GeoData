@@ -7,6 +7,7 @@ get_trail_latlons<-function(area_id,trail_id) {
        
     lloi<-(df_latlons$trail_id==trail_id) & (df_latlons$area_id==area_id)
     latlons<-df_latlons[lloi,]
+    latlons<-latlons[order(latlons$segment_id,as.integer(rownames(latlons))),]
     
 }
 
