@@ -45,6 +45,7 @@ seg_trails<-as.character(trail_seg_counts[,"trail_id"])
 #
 #   eliminate trails that are already saved
 #
+check_skip()
 
 repeat {
     
@@ -103,11 +104,17 @@ all_trail_latlons[all_trail_latlons$area_id==area_id &
                       all_trail_latlons$trail_id==trail_id & 
                       all_trail_latlons$segment_id==3,"segment_id"]<-1
 
+remove_segment<-function(area_id,trail_id,segment_id) {
+    all_trail_latlons<<-all_trail_latlons[!(all_trail_latlons$area_id==area_id & 
+                          all_trail_latlons$trail_id==trail_id & 
+                          all_trail_latlons$segment_id==segment_id),]
+    
+}
 
-check_skip()<-function() {
+check_skip<-function() {
     
     if(!exists("df_skip")) {
-        df_skip<-data.frame(area_id=numeric(),trail_id=character(),stringsAsFactors=F)
+        df_skip<<-data.frame(area_id=numeric(),trail_id=character(),stringsAsFactors=F)
     }
 }
 

@@ -220,22 +220,22 @@ arrange_segments_closest<-function(area_id,trail_id) {
     yndone = F
     nxt<-1
     changed<-F
-    
-    pt1_e<-numeric(2)
-    pt2_s<-numeric(2)
-    
+        
     tolerance<-20
     
     repeat {
         
         roi<-segs_in[nxt,]
-        pt1_e<-c(roi[1,"endlons"],roi[1,"endlats"])
-        pt2_s<-c(segs_out[1,"startlons"],segs_out[1,"startlats"])
+        soi_s<-c(roi[1,"startlons"],roi[1,"startlats"])
+        soi_e<-c(roi[1,"endlons"],roi[1,"endlats"])
         
-        pt1_s<-c(roi[1,"startlons"],roi[1,"startlats"])
-        pt2_e<-c(segs_out[1,"endlons"],segs_out[1,"endlats"])
+        top_s<-c(segs_out[1,"startlons"],segs_out[1,"startlats"])      
+        top_e<-c(segs_out[1,"endlons"],segs_out[1,"endlats"])
         
-        if(distHaversine(pt1_e,pt2_s)<tolerance) {
+        bot_s<-c(segs_out[nrow(segs_out),"startlons"],segs_out[nrow(segs_out),"startlats"])      
+        bot_e<-c(segs_out[nrow(segs_out),"endlons"],segs_out[nrow(segs_out),"endlats"])
+        
+        if(distHaversine(soi_e,top_s)<tolerance) {
             segs_out<-rbind(roi,segs_out)
             if(nrow(segs_out)==total_rows) {
                 yndone<-T
@@ -244,7 +244,7 @@ arrange_segments_closest<-function(area_id,trail_id) {
             }
             changed<-T
             
-        } else if (distHaversine(pt1_s,pt2_e)<tolerance) {
+        } else if (distHaversine(soi_s,bot_e)<tolerance) {
             segs_out<-rbind(segs_out,roi)
             if(nrow(segs_out)==total_rows) {
                 yndone<-T
@@ -274,7 +274,7 @@ arrange_segments_closest<-function(area_id,trail_id) {
             all_trail_latlons[all_trail_latlons$area_id==area_id & 
                                   all_trail_latlons$trail_id==trail_id & 
                                   all_trail_latlons$segment_id==x ,"segment_id"]<<-y+z
-        },1:nrow(segs_out),segs_out$segment_id,total_rows)
+        },segs_out$segment_id,1:nrow(segs_out),total_rows)
         
         
         mapply(function(x,z) {
@@ -293,7 +293,7 @@ arrange_segments<-function(area_id,trail_id) {
     
     total_rows<-nrow(segs_in)
     
-    if (total_rows==1) return
+    if (total_rows==1) return (NULL)
     
     segs_out<-segs_in[1,]
     segs_in<-segs_in[2:nrow(segs_in),]
