@@ -12,9 +12,9 @@ flathead_latlons<-getLatLons(flathead_trails)
 key="Flathead"
 
 
-flathead_latlons[flathead_latlons$trail_id=="10",]
+flathead_latlons[flathead_latlons$trail_num=="10",]
 
-which(coords$trail_id=="10")
+which(coords$trail_num=="10")
 
 coords[396,]
 

@@ -25,15 +25,15 @@ getNodes<-function(x,name,ynClose=T) {
     result
 }
 
-get_coord_set<-function(coords_in) {
+get_trail_coord_set<-function(coords_in) {
     #    df<-data.frame(latitude=numeric(),longitude=numeric,elevation=numeric())
     
     
     my_coords<-as.vector(str_split(string = str_trim(coords_in)," ")[[1]])
     
     len<-length(my_coords)
-    df_coords_local<-data.frame(area_id=integer(len),
-                                trail_id=character(len),
+    df_coords_local<-data.frame(forest_id=integer(len),
+                                trail_num=character(len),
                                 segment_id=integer(len),
                                 latitude=numeric(len),
                                 longitude=numeric(len),
@@ -52,13 +52,13 @@ get_coord_set<-function(coords_in) {
 
 getLatLons<-function(df_trails) {
     
-    df_coords<-data.frame(area_id=integer(),trail_id=character(),segment_id=integer(),latitude=numeric(),longitude=numeric(),elevation=numeric())
+    df_coords<-data.frame(forest_id=integer(),trail_num=character(),segment_id=integer(),latitude=numeric(),longitude=numeric(),elevation=numeric())
     
     len = nrow(df_trails)
     for(i in 1:len) {
-        df<-get_coord_set(df_trails[i,"coords"])
-        df$area_id<-df_trails[i,"area_id"]
-        df$trail_id<-as.character(df_trails[i,"ID"])
+        df<-get_trail_coord_set(df_trails[i,"coords"])
+        df$forest_id<-df_trails[i,"forest_id"]
+        df$trail_num<-as.character(df_trails[i,"ID"])
         df$segment_id<-df_trails[i,"segment_id"]
         df_coords<-rbind(df_coords,df)
     }
