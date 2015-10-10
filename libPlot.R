@@ -70,3 +70,24 @@ plot_trail_saved<-function(area_of_interest,trail_num) {
     
 }
 
+plot_latlons<-function(latlons) {
+    
+     
+    
+    
+    ord<-order(latlons$segment_id,as.integer(rownames(latlons)))
+    
+    latlons_plot<-latlons[ord,]
+    
+    
+    
+    trail_map <- ggplot(latlons_plot, aes(x=longitude, y=latitude)) +
+        geom_path( colour="blue")
+    
+    final_map<-trail_map + coord_map() + ggtitle(trail_num)
+    
+    plot(final_map)
+    
+    TRUE
+}
+

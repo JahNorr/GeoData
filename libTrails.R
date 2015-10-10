@@ -159,8 +159,15 @@ write_segment_ends<-function(df,seg_count,key="tmp") {
 }
 
 get_segment_ends<-function(df) {
-    
-    seg_count<-length(unique(df$segment_id))
+    ################################################################
+    #
+    #
+    #  warning changed a lot of this .. if a problem get it back from
+    #   github
+    #
+    #
+    seg_ids<-unique(df$segment_id)
+    seg_count<-length(seg_ids)
     
     startlats<-numeric(seg_count)
     endlats<-numeric(seg_count)
@@ -168,9 +175,10 @@ get_segment_ends<-function(df) {
     endlons<-numeric(seg_count)
     
     for(i in 1:seg_count) {
-        ids<-row.names(df[df$segment_id==i,])
-        lats<-df[df$segment_id==i,"latitude"]
-        lons<-df[df$segment_id==i,"longitude"]
+        seg_id<-seg_ids[i]
+        ids<-row.names(df[df$segment_id==seg_id,])
+        lats<-df[df$segment_id==seg_id,"latitude"]
+        lons<-df[df$segment_id==seg_id,"longitude"]
         startpt<-min(ids)
         endpt<-max(ids)
         startlats[i]<-df[startpt,"latitude"]
@@ -182,7 +190,7 @@ get_segment_ends<-function(df) {
     
     
     
-    dfMinMax<-data.frame(segment_id=1:seg_count,startlats=startlats,endlats=endlats,startlons=startlons,endlons=endlons)
+    dfMinMax<-data.frame(segment_id=seg_ids,startlats=startlats,endlats=endlats,startlons=startlons,endlons=endlons)
 
 }
 
@@ -444,8 +452,9 @@ arrange_segments_closest<-function(forest_id,trail_num) {
     
 }
 
-arrange_segments_best<-function(forest_id,trail_num) {
-    segs_in<-get_segment_ends(get_trail_latlons(forest_id,trail_num))
+arrange_segments_best<-function(forest_id,trail_num,segs_in) {
+    
+    if(missing("segs_in")) segs_in<-get_segment_ends(get_trail_latlons(forest_id,trail_num))
     
     total_rows<-nrow(segs_in)
     
@@ -460,14 +469,13 @@ arrange_segments_best<-function(forest_id,trail_num) {
     repeat {
            
         roi<-segs_in[nxt,]
-
+        segoi<-roi$segment_id
         if(roi[1,"endlons"]==segs_out[1,"startlons"]) {
             segs_out<-rbind(roi,segs_out)
             if(nrow(segs_out)==total_rows) {
                 yndone<-T
-            } else {
-                segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
             }
+            segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
             changed<-T
             
         } else if(roi[1,"startlons"]==segs_out[nrow(segs_out),"endlons"]) {
@@ -499,7 +507,13 @@ arrange_segments_best<-function(forest_id,trail_num) {
                                     all_trail_latlons$trail_num==trail_num &
                                       all_trail_latlons$segment_id %in% segs_out$segment_id  ,]
     
+    other_latlons<-all_trail_latlons[all_trail_latlons$forest_id==forest_id & 
+                                         all_trail_latlons$trail_num==trail_num &
+                                         all_trail_latlons$segment_id %in% segs_in$segment_id  ,]
+        
     if(nrow(segs_out)>0) {
+        
+        seg_off<-max(segs_out$segment_id)+1
         
         mapply(function(x,y,z) {
             in_seg<-x
@@ -507,17 +521,17 @@ arrange_segments_best<-function(forest_id,trail_num) {
  #           print(paste(in_seg,"->",out_seg,sep=""))
                   
             my_latlons[my_latlons$segment_id==in_seg ,"segment_id"]<<-out_seg
-        },segs_out$segment_id,1:nrow(segs_out),total_rows)
+        },segs_out$segment_id,1:nrow(segs_out),seg_off)
         
 
         mapply(function(x,z) {
             my_latlons[my_latlons$segment_id==x+z ,"segment_id"]<<-x
-        },1:nrow(segs_out),total_rows)
+        },1:nrow(segs_out),seg_off)
 #         
         my_latlons<-my_latlons[my_latlons$segment_id<=nrow(segs_out),]
     }
-    
-    my_latlons
+
+    list(ok=my_latlons,ok_segs=segs_out,not_ok=other_latlons,not_ok_segs=segs_in)
 }
 
 
