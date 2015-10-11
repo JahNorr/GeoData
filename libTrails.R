@@ -290,7 +290,81 @@ segment_gaps<-function(df) {
     mins
 }
 
-arrange_segments_closest<-function(forest_id,trail_num) {
+arrange_segments<-function(forest_id,trail_num) {
+    segs_in<-get_segment_ends(get_trail_latlons(forest_id,trail_num))
+    
+    total_rows<-nrow(segs_in)
+    
+    if (total_rows==1) return (TRUE)
+    
+    segs_out<-segs_in[1,]
+    segs_in<-segs_in[2:nrow(segs_in),]
+    yndone = F
+    nxt<-1
+    changed<-F
+    
+    repeat {
+        
+        roi<-segs_in[nxt,]
+        
+        if(roi[1,"endlons"]==segs_out[1,"startlons"]) {
+            segs_out<-rbind(roi,segs_out)
+            if(nrow(segs_out)==total_rows) {
+                yndone<-T
+            } else {
+                segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
+            }
+            changed<-T
+            
+        } else if(roi[1,"startlons"]==segs_out[nrow(segs_out),"endlons"]) {
+            segs_out<-rbind(segs_out,roi)
+            if(nrow(segs_out)==total_rows) {
+                yndone<-T
+            } else {
+                segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
+            }
+            changed<-T
+            
+        } else {
+            
+        }
+        
+        if (changed) {
+            nxt<-1
+            changed<-F
+        } else {
+            nxt<-nxt+1
+            if(nxt>nrow(segs_in)) yndone<-T
+        }
+        
+        
+        if(yndone) break
+    }
+    
+    if(nrow(segs_out)==total_rows) {
+        mapply(function(x,y,z) {
+            in_seg<-x
+            out_seg<-y+z
+            #           print(paste(in_seg,"->",out_seg,sep=""))
+            
+            all_trail_latlons[all_trail_latlons$forest_id==forest_id & 
+                                  all_trail_latlons$trail_num==trail_num & 
+                                  all_trail_latlons$segment_id==in_seg ,"segment_id"]<<-out_seg
+        },segs_out$segment_id,1:nrow(segs_out),total_rows)
+        
+        
+        mapply(function(x,z) {
+            all_trail_latlons[all_trail_latlons$forest_id==forest_id & 
+                                  all_trail_latlons$trail_num==trail_num & 
+                                  all_trail_latlons$segment_id==x+z ,"segment_id"]<<-x
+        },1:nrow(segs_out),total_rows)
+        #         
+    }
+    
+    return (nrow(segs_out)==total_rows)
+}
+
+arrange_segments_closest2<-function(forest_id,trail_num) {
     segs_in<-get_segment_ends(get_trail_latlons(forest_id,trail_num))
     
     total_rows<-nrow(segs_in)
