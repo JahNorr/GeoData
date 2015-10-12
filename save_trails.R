@@ -22,7 +22,7 @@ trails_ids<-mapply(function(x,y) {
 
 df_trail_coords_accepted$trail_id<-trails_ids
 
-plot_random<-0
+plot_random<-10
 
 if(plot_random>0) {
     rnd<-sample(nrow(df_trails_accepted),plot_random)
