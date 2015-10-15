@@ -1,16 +1,18 @@
 
 
-auto_store_trails<-function(area_of_interest, max_trails=99999) {
+auto_store_trails<-function(area_name, max_trails=99999) {
     debug<-T
     
-    forest_id<-getForestID(area_of_interest)
+    forest_id<-getForestID(area_name)
+    trails_name<-paste(area_name,"trails",sep="_")
+    latlons_name<-paste(area_name,"latlons",sep="_")
     
     ########################################
     #
     #   get the trails for this area
     #
-    trails<-all_trails[all_trails$forest_id==forest_id,]
-    
+    trails<-get(x = trails_name,envir = .GlobalEnv) #all_trails[all_trails$forest_id==forest_id,]
+    trail_latlons<-get(x = latlons_name,envir = .GlobalEnv)
     ########################################
     #
     #   get the unique trail names for this area
@@ -40,13 +42,13 @@ auto_store_trails<-function(area_of_interest, max_trails=99999) {
     #   eliminate trails that are already saved
     #
     check_skip()
-    ynfound<-check_trails_accepted()
-    if(ynfound) next_trail_id<-max(df_trails_accepted$trail_id)+1 else next_trail_id<-1
+    max_trail_id<-check_trails_accepted()
+    next_trail_id<-max_trail_id+1
     trails_checked<-0
     repeat {
         fixed<-F
         
-        if(ynfound) {
+        if(next_trail_id>1) {
             area_trails_accepted<-as.character(df_trails_accepted[df_trails_accepted$forest_id==forest_id,"ID"])
         } else {
             
@@ -65,7 +67,7 @@ auto_store_trails<-function(area_of_interest, max_trails=99999) {
         trail_num<-trails_to_check[1]
         trail_name<-unique(as.character(trails[trails$ID==trail_num,"NAME"]))
         
-        latlons<- get_all_trail_latlons(forest_id,trail_num)
+        latlons<- trail_latlons[trail_latlons$trail_num==trail_num,]
         
         if(debug) print(paste("Trying trail ",trail_num," (",trail_name,") ",sep=""))
         
@@ -80,12 +82,20 @@ auto_store_trails<-function(area_of_interest, max_trails=99999) {
             if(fixed) latlons<-arranged$latlons
         }
         
+        if (!fixed) {
+            arranged<-arrange_segments_best(latlons)
+            fixed<-arranged$all
+            if(fixed) latlons<-arranged$latlons
+            
+            
+        }
+        
         if(fixed) {
             print(paste("Saving trail ",trail_num," (",trail_name,") ",sep=""))
-            
-            accept_trail(forest_id,trail_num,latlons,next_trail_id,ynsave=F)
+    
+            accept_trail(trails,forest_id,trail_num,latlons,next_trail_id,ynsave=F)
             next_trail_id<-next_trail_id+1
-            ynfound<-TRUE
+     
         }
         else  {
             add_skip(forest_id,trail_num)
@@ -166,6 +176,9 @@ arrange_segments<-function(latlons) {
         #    
         
         latlons<-latlons[order(latlons$segment_id,as.integer(rownames(latlons))),]
+        latlons$index<-1:nrow(latlons)
+        latlons$segment_id<-1
+
     }
     
     list(all=nrow(segs_out)==total_rows,latlons=latlons)
@@ -177,7 +190,7 @@ arrange_segments_closest<-function(latlons) {
         
     total_rows<-nrow(segs_in)
     
-    if (total_rows==1) return (TRUE)
+    if (total_rows==1) return (list(all=TRUE,latlons=latlons))
     
     segs_out<-segs_in[1,]
     segs_in<-segs_in[2:nrow(segs_in),]
@@ -244,6 +257,8 @@ arrange_segments_closest<-function(latlons) {
         },1:nrow(segs_out),total_rows)
         #    
         latlons<-latlons[order(latlons$segment_id,as.integer(rownames(latlons))),]
+        latlons$index<-1:nrow(latlons)
+        latlons$segment_id<-1
         
     }
     
@@ -251,3 +266,79 @@ arrange_segments_closest<-function(latlons) {
     
 }
 
+
+arrange_segments_best<-function(latlons,forest_id,trail_num,segs_in) {
+    
+    if(missing("segs_in")) segs_in<-get_segment_ends(latlons)
+    
+    total_rows<-nrow(segs_in)
+    
+    if (total_rows==1) return (list(all=TRUE,latlons=latlons))
+    
+    segs_out<-segs_in[1,]
+    segs_in<-segs_in[2:nrow(segs_in),]
+    yndone = F
+    nxt<-1
+    changed<-F
+    
+    repeat {
+        
+        roi<-segs_in[nxt,]
+        segoi<-roi$segment_id
+        if(roi[1,"endlons"]==segs_out[1,"startlons"]) {
+            segs_out<-rbind(roi,segs_out)
+            if(nrow(segs_out)==total_rows) {
+                yndone<-T
+            }
+            segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
+            changed<-T
+            
+        } else if(roi[1,"startlons"]==segs_out[nrow(segs_out),"endlons"]) {
+            segs_out<-rbind(segs_out,roi)
+            if(nrow(segs_out)==total_rows) {
+                yndone<-T
+            } else {
+                segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
+            }
+            changed<-T
+            
+        } else {
+            
+        }
+        
+        if (changed) {
+            nxt<-1
+            changed<-F
+        } else {
+            nxt<-nxt+1
+            if(nxt>nrow(segs_in)) yndone<-T
+        }
+        
+        
+        if(yndone) break
+    }
+    
+    my_latlons<-latlons[latlons$segment_id %in% segs_out$segment_id  ,]
+    
+    other_latlons<-latlons[latlons$segment_id %in% segs_in$segment_id  ,]
+    
+    if(nrow(segs_out)>0) {
+        
+        seg_off<-max(segs_out$segment_id)+1
+        
+        mapply(function(x,y,z) {
+            in_seg<-x
+            out_seg<-y+z
+            my_latlons[my_latlons$segment_id==in_seg ,"segment_id"]<<-out_seg
+        },segs_out$segment_id,1:nrow(segs_out),seg_off)
+        
+        
+        mapply(function(x,z) {
+            my_latlons[my_latlons$segment_id==x+z ,"segment_id"]<<-x
+        },1:nrow(segs_out),seg_off)
+        #         
+        my_latlons<-my_latlons[my_latlons$segment_id<=nrow(segs_out),]
+    }
+    
+    list(ok=my_latlons,ok_segs=segs_out,not_ok=other_latlons,not_ok_segs=segs_in)
+}

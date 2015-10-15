@@ -11,19 +11,14 @@ save_trail_area<-function(area_name,rebuild_raw=T, ...) {
     
     if(rebuild_raw) get_raw_trails(name = area_name)
     
-    
     trails_name<-paste(area_name,"trails",sep="_")
     latlons_name<-paste(area_name,"latlons",sep="_")
     
-    if(!exists("all_trails")) load("./data/trails/all_trails_empty.RData",envir = .GlobalEnv)
-    
-    mirror_columns(to=trails_name,from="all_trails")
-         
-#        start_id<-max(all_trails$trail_id)
-        all_trails<<-rbind(all_trails,get(x = trails_name) )
-        all_trail_latlons<<-rbind(all_trail_latlons,get(x = latlons_name))
-    
-    
+    if(!exists("df_trails_accepted")) load_empty_trails_accepted()
+  
+        
+    mirror_columns(to=trails_name,from="df_trails_accepted")
+             
     save_trails(area_name)
 
     
@@ -373,89 +368,6 @@ arrange_segments_closest2<-function(forest_id,trail_num) {
 }
 
 
-arrange_segments_best<-function(forest_id,trail_num,segs_in) {
-    
-    if(missing("segs_in")) segs_in<-get_segment_ends(get_trail_latlons(forest_id,trail_num))
-    
-    total_rows<-nrow(segs_in)
-    
-    if (total_rows==1) return (TRUE)
-    
-    segs_out<-segs_in[1,]
-    segs_in<-segs_in[2:nrow(segs_in),]
-    yndone = F
-    nxt<-1
-    changed<-F
-
-    repeat {
-           
-        roi<-segs_in[nxt,]
-        segoi<-roi$segment_id
-        if(roi[1,"endlons"]==segs_out[1,"startlons"]) {
-            segs_out<-rbind(roi,segs_out)
-            if(nrow(segs_out)==total_rows) {
-                yndone<-T
-            }
-            segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
-            changed<-T
-            
-        } else if(roi[1,"startlons"]==segs_out[nrow(segs_out),"endlons"]) {
-            segs_out<-rbind(segs_out,roi)
-            if(nrow(segs_out)==total_rows) {
-                yndone<-T
-            } else {
-                segs_in<-segs_in[!((1:nrow(segs_in)) %in% nxt),]
-            }
-            changed<-T
-            
-        } else {
-            
-        }
-        
-        if (changed) {
-            nxt<-1
-            changed<-F
-        } else {
-            nxt<-nxt+1
-            if(nxt>nrow(segs_in)) yndone<-T
-        }
-        
-        
-        if(yndone) break
-    }
-    
-    my_latlons<-all_trail_latlons[all_trail_latlons$forest_id==forest_id & 
-                                    all_trail_latlons$trail_num==trail_num &
-                                      all_trail_latlons$segment_id %in% segs_out$segment_id  ,]
-    
-    other_latlons<-all_trail_latlons[all_trail_latlons$forest_id==forest_id & 
-                                         all_trail_latlons$trail_num==trail_num &
-                                         all_trail_latlons$segment_id %in% segs_in$segment_id  ,]
-        
-    if(nrow(segs_out)>0) {
-        
-        seg_off<-max(segs_out$segment_id)+1
-        
-        mapply(function(x,y,z) {
-            in_seg<-x
-            out_seg<-y+z
- #           print(paste(in_seg,"->",out_seg,sep=""))
-                  
-            my_latlons[my_latlons$segment_id==in_seg ,"segment_id"]<<-out_seg
-        },segs_out$segment_id,1:nrow(segs_out),seg_off)
-        
-
-        mapply(function(x,z) {
-            my_latlons[my_latlons$segment_id==x+z ,"segment_id"]<<-x
-        },1:nrow(segs_out),seg_off)
-#         
-        my_latlons<-my_latlons[my_latlons$segment_id<=nrow(segs_out),]
-    }
-
-    list(ok=my_latlons,ok_segs=segs_out,not_ok=other_latlons,not_ok_segs=segs_in)
-}
-
-
 check_reverse<-function(forest_id,trail_num,seg_count) {
     if(seg_count==2) {
         ends<-get_segment_ends(get_trail_latlons(forest_id,trail_num),seg_count = seg_count)
@@ -555,8 +467,8 @@ clean_trails_env<-function() {
     rm(df_trails_accepted,envir = .GlobalEnv)
     rm(df_trail_coords_accepted,envir = .GlobalEnv)
     rm(df_skip,envir = .GlobalEnv)
-    rm(all_trails,envir = .GlobalEnv)
-    rm(all_trail_latlons,envir = .GlobalEnv)
+#     rm(all_trails,envir = .GlobalEnv)
+#     rm(all_trail_latlons,envir = .GlobalEnv)
     
     remove_accepted_trail_data_file()
     
@@ -564,12 +476,14 @@ clean_trails_env<-function() {
     options(warn = oldw)
 }
 
+# 
+# build_empty_all_trails<-function(){
+#     
+#     all_trails<-all_trails[which(is.na(all_trails$ID)),]
+#     all_trail_latlons<-all_trail_latlons[which(is.na(all_trail_latlons$trail_num)),]
+#     save(all_trails,all_trail_latlons,file="./data/trails/all_trails_empty.RData")
+#     
+# }
 
-build_empty_all_trails<-function(){
-    
-    all_trails<-all_trails[which(is.na(all_trails$ID)),]
-    all_trail_latlons<-all_trail_latlons[which(is.na(all_trail_latlons$trail_num)),]
-    save(all_trails,all_trail_latlons,file="./data/trails/all_trails_empty.RData")
-    
-}
+
 
