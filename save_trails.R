@@ -8,7 +8,7 @@ options(stringsAsFactors=F)
 clean_trails_env()
 
 save_trail_area("flathead",rebuild_raw = F)#, max_trails=15)
-save_trail_area("kootenai",rebuild_raw = F)#, max_trails=200)
+save_trail_area("kootenai",rebuild_raw = T)#, max_trails=200)
 
 df_trails_accepted$forest_id<-as.integer(df_trails_accepted$forest_id)
 df_trails_accepted$trail_id<-as.integer(1:(nrow(df_trails_accepted)))

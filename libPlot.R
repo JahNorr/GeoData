@@ -1,4 +1,5 @@
-
+library(maptools)
+library(ggmap)
 library(ggplot2)
 
 
@@ -75,13 +76,11 @@ plot_latlons<-function(latlons) {
      
     
     
-    ord<-order(latlons$segment_id,as.integer(rownames(latlons)))
+    ord<-order(latlons$index)
     
     latlons_plot<-latlons[ord,]
     
-    
-    
-    trail_map <- ggplot(latlons_plot, aes(x=longitude, y=latitude)) +
+    trail_map <- ggplot(latlons_plot, aes(x=longitude, y=latitude, group=segment_id,color=segment_id)) +
         geom_path( colour="blue")
     
     final_map<-trail_map + coord_map() + ggtitle(trail_num)
@@ -89,5 +88,44 @@ plot_latlons<-function(latlons) {
     plot(final_map)
     
     TRUE
+}
+
+google_plot_latlons<-function(latlons) {
+  
+  space<-0.02
+  
+  ord<-order(latlons$index)
+  
+  latlons_plot<-latlons[ord,]
+  lons<-latlons_plot$longitude
+  lats<-latlons_plot$latitude
+  
+  minlat<-min(lats)-space
+  maxlat<-max(lats)+space
+  minlon<-min(lons)-space
+  maxlon<-max(lons)+space
+  
+  rnglat<-maxlat-minlat
+  rnglon<-maxlon-minlon
+  
+  centerlat<-minlat+rnglat/2
+  centerlon<-minlon+rnglon/2
+  
+  mapImage <- get_map(location = c( left=minlon,bottom=minlat,right=maxlon,top=maxlat),
+                      color = "color",
+                      source = "google",
+                      maptype = "terrain")
+  
+  
+map<-  ggmap(mapImage) +
+    geom_point(aes(x = longitude,
+                     y = latitude),
+               data = latlons_plot) +
+    labs(x = "Longitude",
+         y = "Latitude")
+  
+
+plot(map)
+  TRUE
 }
 

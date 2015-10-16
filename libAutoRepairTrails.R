@@ -72,23 +72,23 @@ auto_store_trails<-function(area_name, max_trails=99999) {
         if(debug) print(paste("Trying trail ",trail_num," (",trail_name,") ",sep=""))
         
         arranged<-arrange_segments(latlons)
-        fixed<-arranged$all
+        fixed<-arranged$success
         if(fixed) latlons<-arranged$latlons
         
         if(!fixed){
             
             arranged<-arrange_segments_closest(latlons)
-            fixed<-arranged$all
+            fixed<-arranged$success
             if(fixed) latlons<-arranged$latlons
         }
         
-        if (!fixed) {
-            arranged<-arrange_segments_best(latlons)
-            fixed<-arranged$all
-            if(fixed) latlons<-arranged$latlons
-            
-            
-        }
+#         if (!fixed) {
+#             arranged<-arrange_segments_best(latlons)
+#             fixed<-arranged$success
+#             if(fixed) latlons<-arranged$latlons
+#             
+#             
+#         }
         
         if(fixed) {
             print(paste("Saving trail ",trail_num," (",trail_name,") ",sep=""))
@@ -114,7 +114,7 @@ arrange_segments<-function(latlons) {
     
     total_rows<-nrow(segs_in)
     
-    if (total_rows==1) return (list(all=TRUE,latlons=latlons))
+    if (total_rows==1) return (list(success=TRUE,latlons=latlons))
     
     segs_out<-segs_in[1,]
     segs_in<-segs_in[2:nrow(segs_in),]
@@ -181,7 +181,7 @@ arrange_segments<-function(latlons) {
 
     }
     
-    list(all=nrow(segs_out)==total_rows,latlons=latlons)
+    list(success=nrow(segs_out)==total_rows,latlons=latlons)
 }
 
 arrange_segments_closest<-function(latlons) {
@@ -190,7 +190,7 @@ arrange_segments_closest<-function(latlons) {
         
     total_rows<-nrow(segs_in)
     
-    if (total_rows==1) return (list(all=TRUE,latlons=latlons))
+    if (total_rows==1) return (list(success=TRUE,latlons=latlons))
     
     segs_out<-segs_in[1,]
     segs_in<-segs_in[2:nrow(segs_in),]
@@ -262,18 +262,24 @@ arrange_segments_closest<-function(latlons) {
         
     }
     
-    list(all=nrow(segs_out)==total_rows,latlons=latlons)
+    list(success=nrow(segs_out)==total_rows,latlons=latlons)
     
 }
 
 
-arrange_segments_best<-function(latlons,forest_id,trail_num,segs_in) {
+arrange_segments_best<-function(latlons,segs_in) {
     
     if(missing("segs_in")) segs_in<-get_segment_ends(latlons)
     
     total_rows<-nrow(segs_in)
     
-    if (total_rows==1) return (list(all=TRUE,latlons=latlons))
+    if (total_rows==1) {
+      latlons<-latlons[as.integer(rownames(latlons)),]
+      latlons$index<-1:nrow(latlons)
+      latlons$segment_id<-1
+      return (list(ok=latlons,ok_segs=segs_in,not_ok=NULL,not_ok_segs=NULL))
+    }
+
     
     segs_out<-segs_in[1,]
     segs_in<-segs_in[2:nrow(segs_in),]
@@ -340,5 +346,32 @@ arrange_segments_best<-function(latlons,forest_id,trail_num,segs_in) {
         my_latlons<-my_latlons[my_latlons$segment_id<=nrow(segs_out),]
     }
     
+    my_latlons<-my_latlons[order(my_latlons$segment_id,as.integer(rownames(my_latlons))),]
+    my_latlons$index<-1:nrow(my_latlons)
+    my_latlons$segment_id<-1
+
+    
     list(ok=my_latlons,ok_segs=segs_out,not_ok=other_latlons,not_ok_segs=segs_in)
 }
+
+
+arrange_segments_multi<-function(latlons) {
+  
+  fixed<-arrange_segments_best(latlons)
+  
+  save_ll<-fixed$ok
+  seg<-1
+  
+  while(nrow(fixed$not_ok_segs)!=0){
+    seg<-seg+1
+    
+    fixed<-arrange_segments_best(latlons,segs_in = fixed$not_ok_segs)
+    
+    save_ll_new<-fixed$ok
+    save_ll_new$segment_id<-seg
+    save_ll<-rbind(save_ll,save_ll_new)
+    
+  }
+  save_ll
+}
+
